@@ -4,7 +4,7 @@ using namespace std;
 BigNumber multiplication_modulaireGN(BigNumber& a, BigNumber& b, BigNumber& n, int r, BigNumber& v, BigNumber& real_r2);
 
 BigNumber multiplication_modulaireGN(BigNumber& a, BigNumber& b, BigNumber& n, int r, BigNumber& v, BigNumber& real_r2){
-    BigNumber unite({1}, a.val_base);
+    BigNumber unite({1}, a.m_base);
     BigNumber a1 = montgomery(a, real_r2, n, r, v);
     BigNumber b1 = montgomery(b, real_r2, n, r, v);
     BigNumber c = b1;
@@ -25,8 +25,8 @@ BigNumber multiplication_modulaireGN(BigNumber& a, BigNumber& b, BigNumber& n, i
 //    BigNumber real_r2 ({4}, base, 1);
 //    int r = n.size();
 //
-//    BigNumber resultat = square_and_multiply(m, e, n, r, v, real_r2);
-//    resultat = square_and_multiply(resultat, d, n, r, v, real_r2);
+//    BigNumber resultat = m.m_square_and_multiply(e, n, r, v, real_r2);
+//    resultat = resultat.m_square_and_multiply(d, n, r, v, real_r2);
 //    cout << resultat << endl;
 //
 //
@@ -57,10 +57,11 @@ int main() {
     BigNumber n = p*q;
     int r = (int)n.size();
 
-    BigNumber resultat = square_and_multiply(m, encrypt, n, r, v, real_r2);
+    BigNumber resultat = m.m_square_and_multiply(encrypt, n, r, v, real_r2);
     cout << "Cipher : " << resultat << endl;
-    resultat = square_and_multiply(resultat, decrypt, n, r, v, real_r2);
+    resultat = resultat.m_square_and_multiply(decrypt, n, r, v, real_r2);
     cout << "Plaintext : " << resultat << endl;
+    cout << "Comparaison : " << (int)(resultat == m) <<endl;
 
 
 
