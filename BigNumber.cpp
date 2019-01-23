@@ -18,25 +18,52 @@ BigNumber::BigNumber(vector<unsigned int> coefs, long unsigned int base){
     this->val_base = base;
 }
 
-bool BigNumber::operator >= (BigNumber value){
+BigNumber::BigNumber(long unsigned int base){
+    this->val_base = base;
+    this->coef.emplace_back(0);
+}
 
-    if(this->coef.size() > value.coef.size()){
+bool operator == (BigNumber& value1, BigNumber& value2){
+    value1.format();
+    value2.format();
+    return value1.coef == value2.coef;
+}
+
+bool operator > (BigNumber& value1, BigNumber& value2){
+    value1.format();
+    value2.format();
+    if(value1.size() > value2.size()){
         return true;
     }
 
-    else if(this->coef.size() == value.coef.size()){
-        for(int i = this->size() - 1; i >= 0; i--){
-            if(this->coef[i] > value.coef[i]){
+    else if(value1.size() == value2.size()){
+        for(int i = (int)value1.size() - 1; i >= 0; i--){
+            if(value1.coef[i] > value2.coef[i]){
                 return true;
             }
-            else if(this->coef[i] != value.coef[i]){
+            else if(value1.coef[i] != value2.coef[i]){
                 return false;
             }
         }
-        //return true;
     }
     return false;
 
+}
+
+bool operator >= (BigNumber& value1, BigNumber& value2){
+    return value1 > value2 || value1 == value2;
+}
+
+bool operator <= (BigNumber& value1, BigNumber& value2){
+    return !(value1 > value2);
+}
+
+bool operator != (BigNumber& value1, BigNumber& value2){
+    return !(value1 == value2);
+}
+
+bool operator < (BigNumber& value1, BigNumber& value2){
+    return !((value1 > value2) || (value1 == value2));
 }
 
 void BigNumber::operator << (const int index){
@@ -56,9 +83,7 @@ void BigNumber::operator >> (const int index){
 BigNumber& BigNumber::operator = (BigNumber nb){
     this->val_base = nb.val_base;
     this->coef.clear();
-    for(unsigned long i = 0; i < nb.coef.size(); i++){
-        this->coef.emplace_back(nb.coef[i]);
-    }
+    this->coef = nb.coef;
     return *this;
 }
 
@@ -70,34 +95,19 @@ ostream& operator << (ostream& os, BigNumber nb ){
     return os;
 }
 
-BigNumber operator+(const BigNumber nb1, const BigNumber nb2){
+BigNumber operator + (const BigNumber nb1, const BigNumber nb2){
     vector<unsigned int> coef;
     int retenue = 0;
     for(unsigned long i = 0; i < max(nb1.coef.size(), nb2.coef.size()); i++){
         coef.emplace_back(retenue);
         retenue = 0;
 
-
         if( i < nb1.coef.size()){
-            if(nb1.val_base - coef[i] > nb1.coef[i]) {
-                coef[i] += nb1.coef[i];
-            }
-            else{
-                retenue = 1;
-                coef[i] -= nb1.val_base;
-                coef[i] += nb1.coef[i];
-            }
+            add(&coef[i], nb1.coef[i], &retenue, nb1.val_base);
         }
 
         if( i < nb2.coef.size()){
-            if(nb2.val_base - coef[i] > nb2.coef[i]) {
-                coef[i] += nb2.coef[i];
-            }
-            else{
-                retenue = 1;
-                coef[i] -= nb2.val_base;
-                coef[i] += nb2.coef[i];
-            }
+            add(&coef[i], nb2.coef[i], &retenue, nb2.val_base);
         }
     }
     if(retenue){
@@ -108,6 +118,9 @@ BigNumber operator+(const BigNumber nb1, const BigNumber nb2){
 }
 
 BigNumber operator - (const BigNumber nb1, const BigNumber nb2) {
+    /*
+     * TODO : A refaire ^^
+     */
     BigNumber tmp ({}, nb2.val_base);
     int retenue = 0;
     for(unsigned int i = 0; i < max(nb1.coef.size(), nb2.coef.size()); i++){
@@ -155,86 +168,108 @@ BigNumber operator - (const BigNumber nb1, const BigNumber nb2) {
         }
     }
 
-    int i= 0;
-    int size = tmp.size();
-    while(i < size && tmp.coef[size-1-i] == 0){
-        tmp.coef.erase(tmp.coef.begin() + size-1-i);
-        i++;
-    }
+    tmp.format();
     return tmp;
 }
 
 
-BigNumber operator*(const BigNumber nb1, const BigNumber nb2) {
-    vector<vector<unsigned int>> resultats;
+BigNumber operator * (const BigNumber nb1, const BigNumber nb2) {
+    const unsigned int SIZE_INT16 = 65536;
+    BigNumber resultat(nb1.val_base);
     for(unsigned long i = 0; i < nb1.coef.size(); i++) {
-        unsigned int high1 = (nb1.coef[i] >> 16);
-        unsigned int low1 = (nb1.coef[i] & 0x0000FFFF);
         unsigned int retenue = 0;
-        vector<unsigned int> res_int;
+        vector<unsigned int> resultat_intermedaire;
+
+        /*
+         * On split la valeur du coef de 32 bits en deux valeurs de 16 bits
+         * On a coef = [high1 low1]
+         */
+        const unsigned int high1 = (nb1.coef[i] >> 16);
+        const unsigned int low1 = (nb1.coef[i] & 0x0000FFFF);
+
         for (unsigned long j = 0; j < nb2.coef.size(); j++) {
+        /*
+         * Calcul des résultats intermédiaires des sous-blocks de 16bits des opérandes
+         */
+
+            const unsigned int high2 = (nb2.coef[j] >> 16);
+            const unsigned int low2 = (nb2.coef[j] & 0x0000FFFF);
+
+        /*
+         * On multiplie de nombre de 16 bits; le résultat sera inferieur a 32bits donc pas d'overflow
+         */
+            const unsigned int res1 = low1 * low2;
+            const unsigned int res2 = high2 * low1;
+            const unsigned int res3 = low2 * high1;
+            const unsigned int res4 = high1 * high2;
+
+
+        /*
+         * Calcul du résultat de la multiplication sur 32 bits
+         */
+
+
+            unsigned int resultat32b = 0;
+
             /*
-             * Calcul des résultats intermédiaires des sous-blocks de 16bits des opérandes
+             * Le resultat de la multiplication est donné par [left1, right1]
+             * La retenue est donné par [left2, right2]
              */
-
-            unsigned int high2 = (nb2.coef[j] >> 16);
-            unsigned int low2 = (nb2.coef[j] & 0x0000FFFF);
-
-            /*
-             * On multiplie de nombre de 16 bits; le résultat sera inferieur a 32bits donc pas d'overflow
-             */
-            unsigned int res1 = low1 * low2;
-            unsigned int res2 = high2 * low1;
-            unsigned int res3 = low2 * high1;
-            unsigned int res4 = high1 * high2;
-
-
-            /*
-             * Calcul du résultat de la multiplication sur 32 bits
-             */
-            unsigned int maxBase = 65536;
-            unsigned int resultat = 0;
             unsigned int right2 = 0;
             unsigned int left2 = 0;
             unsigned int left1 = 0;
+            /*
+             * On initialise a la valeur de la retenue précédente
+             */
             unsigned int right1 = retenue;
             retenue = 0;
-            while(right1 > maxBase){
-                left1 += 1;
-                right1 -= maxBase;
-            }
-            if(maxBase - right1 > (res1 & 0x0000FFFF)){
+
+            /*
+             * Valeurs sur 16bits ! Si ca dépasse on fait passer l'exédent sur les 16bits suivants
+             * right1 -> left1
+             * left1 -> right2
+             * right2 -> left2
+             * left2 -> retenue
+             */
+            left1 = right1 / SIZE_INT16;
+            right1 = right1 % SIZE_INT16;
+
+            /*
+             * On additionne avec prudence en vérifiant les overflows possible
+             * pour former le résultat et la retenue sur 32 bits
+             */
+            if(SIZE_INT16 - right1 > (res1 & 0x0000FFFF)){
                 right1 += (res1 & 0x0000FFFF);
             }
             else{
-                right1 -= maxBase;
+                right1 -= SIZE_INT16;
                 right1 += (res1 & 0x0000FFFF);
                 left1 += 1;
             }
 
-            if(maxBase - left1 > (res1 >> 16)){
+            if(SIZE_INT16 - left1 > (res1 >> 16)){
                 left1 += (res1 >> 16);
             }
             else{
-                left1 -= maxBase;
+                left1 -= SIZE_INT16;
                 left1 += (res1 >> 16);
                 right2 += 1;
             }
 
-            if(maxBase - left1 > (res2 & 0x0000FFFF)){
+            if(SIZE_INT16 - left1 > (res2 & 0x0000FFFF)){
                 left1 += (res2 & 0x0000FFFF);
             }
             else{
-                left1 -= maxBase;
+                left1 -= SIZE_INT16;
                 left1 += (res2 & 0x0000FFFF);
                 right2 += 1;
             }
 
-            if(maxBase - left1 > (res3 & 0x0000FFFF)){
+            if(SIZE_INT16 - left1 > (res3 & 0x0000FFFF)){
                 left1 += (res3 & 0x0000FFFF);
             }
             else{
-                left1 -= maxBase;
+                left1 -= SIZE_INT16;
                 left1 += (res3 & 0x0000FFFF);
                 right2 += 1;
             }
@@ -243,77 +278,79 @@ BigNumber operator*(const BigNumber nb1, const BigNumber nb2) {
              * Calcul de la retenue
              */
 
-            if(maxBase - right2 > (res4 & 0x0000FFFF)){
+            if(SIZE_INT16 - right2 > (res4 & 0x0000FFFF)){
                 right2 += (res4 & 0x0000FFFF);
             }
             else{
-                right2 -= maxBase;
+                right2 -= SIZE_INT16;
                 right2 += (res4 & 0x0000FFFF);
                 left2 += 1;
             }
 
-            if(maxBase - right2 > (res2 >> 16)){
+            if(SIZE_INT16 - right2 > (res2 >> 16)){
                 right2 += (res2 >> 16);
             }
             else{
-                right2 -= maxBase;
+                right2 -= SIZE_INT16;
                 right2 += (res2 >> 16);
                 left2 += 1;
             }
 
-            if(maxBase - right2 > (res3 >> 16)){
+            if(SIZE_INT16 - right2 > (res3 >> 16)){
                 right2 += (res3 >> 16);
             }
             else{
-                right2 -= maxBase;
+                right2 -= SIZE_INT16;
                 right2 += (res3 >> 16);
                 left2 += 1;
             }
 
-            if(maxBase - left2 > (res4 >> 16)) {
+            if(SIZE_INT16 - left2 > (res4 >> 16)) {
                 left2 += (res4 >> 16);
             }
             else{
-                left2 -= maxBase;
+                left2 -= SIZE_INT16;
                 left2 += (res4 >> 16);
                 retenue += 1;
             }
 
             retenue += (left2 << 16) + right2;
-            resultat += (left1 << 16) + right1;
-            while(resultat >= nb1.val_base) {
-                //Uniquement pour des bases inférieur a 2^32
-                resultat -= nb1.val_base;
-                retenue += 1;
+            resultat32b += (left1 << 16) + right1;
+            if(nb1.val_base < 4294967296) {
+                resultat32b = resultat32b % (unsigned int)nb1.val_base;
+                retenue = resultat32b / (unsigned int)nb1.val_base;
             }
-            res_int.emplace_back(resultat);
+            resultat_intermedaire.emplace_back(resultat32b);
         }
 
         if(retenue != 0){
-            res_int.emplace_back(retenue);
+            resultat_intermedaire.emplace_back(retenue);
         }
-        resultats.emplace_back(res_int);
+        BigNumber tmp(resultat_intermedaire, nb1.val_base);
+        tmp >> i;
+        resultat = resultat + tmp;
     }
-    vector <unsigned int> coef;
-    coef.emplace_back(0);
-    BigNumber res(coef, nb1.val_base);
-    for(unsigned long i = 0; i < resultats.size(); i++){
-        BigNumber tmp(resultats[i], nb1.val_base);
-        for(unsigned int j = 0; j < i; j++){
-            tmp.coef.insert(tmp.coef.begin(), 0);
-        }
-        res = res + tmp;
-    }
-    return res;
+
+    resultat.format();
+
+
+    return resultat;
 }
 
-BigNumber MontgomeryGN(BigNumber& a, BigNumber& b, BigNumber& n, int r, BigNumber& v){
+void BigNumber::format(){
+    int i = 0;
+    while(i < this->size() && this->coef[this->size()-1-i] == 0){
+        this->coef.erase(this->coef.begin() + this->size()-1-i);
+        i++;
+    }
+}
+
+BigNumber montgomery(BigNumber &a, BigNumber &b, BigNumber &n, int r, BigNumber &v){
 
     BigNumber s = a*b;
     BigNumber t = s*v;
     t.mask(r);
-    BigNumber tmp = t*n;
-    BigNumber m = s + tmp;
+    BigNumber m = s + t*n;
     BigNumber u = m;
 
     u << r;
@@ -326,37 +363,48 @@ BigNumber MontgomeryGN(BigNumber& a, BigNumber& b, BigNumber& n, int r, BigNumbe
 
 
 
-BigNumber quick_expGN(BigNumber& m, BigNumber& e, BigNumber& N, int r, BigNumber& v, BigNumber& real_r2 ){
+BigNumber square_and_multiply(BigNumber &m, BigNumber &e, BigNumber &N, int r, BigNumber &v, BigNumber &real_r2){
 
     unsigned int size = 32;
     char representation[(unsigned long)size];
-    BigNumber resultat ({1}, m.val_base);
+    BigNumber result ({1}, m.val_base);
     BigNumber unite ({1}, m.val_base);
-    BigNumber m1 = MontgomeryGN(m,real_r2,N,r,v);
+    BigNumber m1 = montgomery(m, real_r2, N, r, v);
     bool empty = true;
 
-    for(double i = e.size()-1; i >= 0; i--){
-        representation_binaire(e.coef[i], representation, size, 2);
+    for(unsigned long i = e.size() ; i > 0; i--){
+        representation_binaire(e.coef[i - 1], representation, size, 2);
         for(unsigned int j = 0; j < size; j++) {
 
             if(!empty) {
-                resultat = MontgomeryGN(resultat, resultat, N, r, v);
+                result = montgomery(result, result, N, r, v);
             }
             if (representation[j] == '1') {
                 if(empty){
-                    resultat = m1;
+                    result = m1;
                     empty = false;
                 }
                 else {
-                    resultat = MontgomeryGN(resultat, m1, N, r, v);
+                    result = montgomery(result, m1, N, r, v);
                 }
             }
         }
 
     }
-    resultat = MontgomeryGN(resultat,unite,N,r,v);
-    return resultat;
+    result = montgomery(result, unite, N, r, v);
+    return result;
 }
+
+void BigNumber::mask(int r) {
+    vector<unsigned int> tmp;
+    for (unsigned int i = 0; i < this->size(); i ++){
+        if(i < r){
+            tmp.emplace_back(this->coef[i]);
+        }
+    }
+    coef = tmp;
+}
+
 
 void representation_binaire(const unsigned int decimal, char *representation, double size, int base){
     unsigned int val = decimal;
@@ -373,5 +421,19 @@ void representation_binaire(const unsigned int decimal, char *representation, do
         }
         bit_val /= base;
         bit_pointer += 1;
+    }
+}
+
+void add(unsigned int *a, const unsigned int b, int *retenue, const long unsigned int base) {
+    /**
+     * Addition avec overflow p/r a la base
+     */
+    if(base - *a > b) {
+        *a += b;
+    }
+    else{
+        *retenue = 1;
+        *a -= base;
+        *a += b;
     }
 }

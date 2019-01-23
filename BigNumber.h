@@ -15,26 +15,27 @@ class BigNumber{
 public:
     BigNumber(vector<unsigned int> coefs, long unsigned int base, int reverse);
     BigNumber(vector<unsigned int> coefs, long unsigned int base);
-    void mask(int r){
-        vector<unsigned int> tmp;
-        for (unsigned int i = 0; i < this->size(); i ++){
-            if(i < r){
-                tmp.emplace_back(this->coef[i]);
-            }
-        }
-        this->coef = tmp;
-    }
+
+    explicit BigNumber(long unsigned int base);
+    void mask(int r);
     BigNumber& operator = (BigNumber nb);
-    int size(){return this->coef.size();}
+    unsigned long size(){return this->coef.size();}
     void operator >> (int index);
-    bool operator >= (BigNumber value);
+    friend bool operator == (BigNumber& value1, BigNumber& value2);
+    friend bool operator > (BigNumber& value1, BigNumber& value2);
+    friend bool operator >= (BigNumber& value1, BigNumber& value2);
+    void operator << (int index);
     friend ostream& operator << (ostream& os, BigNumber nb2 );
-    void operator << (const int index);
+
     friend BigNumber operator + (BigNumber nb1, BigNumber nb2);
     friend BigNumber operator - (BigNumber nb1, BigNumber nb2);
     friend BigNumber operator * (BigNumber nb1, BigNumber nb2);
-    friend BigNumber quick_expGN(BigNumber& m, BigNumber& e, BigNumber& N, int r, BigNumber& v, BigNumber& real_r2 );
-    friend BigNumber MontgomeryGN(BigNumber& a, BigNumber& b, BigNumber& n, int r, BigNumber& v);
+    friend BigNumber square_and_multiply(BigNumber &m, BigNumber &e, BigNumber &N, int r, BigNumber &v,
+                                         BigNumber &real_r2);
+    friend BigNumber montgomery(BigNumber &a, BigNumber &b, BigNumber &n, int r, BigNumber &v);
+
+    void format();
+
     long unsigned int val_base;
 
 private:
@@ -46,8 +47,9 @@ ostream& operator << (ostream& os, BigNumber nb );
 BigNumber operator + (BigNumber nb1, BigNumber nb2);
 BigNumber operator * (BigNumber nb1, BigNumber nb2);
 
-BigNumber MontgomeryGN(BigNumber& a, BigNumber& b, BigNumber& n, int r, BigNumber& v);
-BigNumber quick_expGN(BigNumber& m, BigNumber& e, BigNumber& N, int r, BigNumber& v );
+BigNumber montgomery(BigNumber &a, BigNumber &b, BigNumber &n, int r, BigNumber &v);
+BigNumber square_and_multiply(BigNumber &m, BigNumber &e, BigNumber &N, int r, BigNumber &v);
 void representation_binaire(unsigned int decimal, char *representation, double size, int base);
+void add(unsigned int *a, unsigned int b, int *retenue, long unsigned int base);
 
 #endif //RSA_BIGNUMBER_H

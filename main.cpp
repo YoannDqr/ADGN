@@ -3,17 +3,15 @@
 using namespace std;
 BigNumber multiplication_modulaireGN(BigNumber& a, BigNumber& b, BigNumber& n, int r, BigNumber& v, BigNumber& real_r2);
 
-
-
 BigNumber multiplication_modulaireGN(BigNumber& a, BigNumber& b, BigNumber& n, int r, BigNumber& v, BigNumber& real_r2){
     BigNumber unite({1}, a.val_base);
-    BigNumber a1 = MontgomeryGN(a,real_r2,n,r,v);
-    BigNumber b1 = MontgomeryGN(b,real_r2,n,r,v);
+    BigNumber a1 = montgomery(a, real_r2, n, r, v);
+    BigNumber b1 = montgomery(b, real_r2, n, r, v);
     BigNumber c = b1;
-    c = MontgomeryGN(c, c, n, r, v);
-    c = MontgomeryGN(c, b1, n, r, v);
+    c = montgomery(c, c, n, r, v);
+    c = montgomery(c, b1, n, r, v);
 
-    return MontgomeryGN(c,unite,n,r,v);
+    return montgomery(c, unite, n, r, v);
 }
 
 //int main(){
@@ -27,8 +25,8 @@ BigNumber multiplication_modulaireGN(BigNumber& a, BigNumber& b, BigNumber& n, i
 //    BigNumber real_r2 ({4}, base, 1);
 //    int r = n.size();
 //
-//    BigNumber resultat = quick_expGN(m, e, n, r, v, real_r2);
-//    resultat = quick_expGN(resultat, d, n, r, v, real_r2);
+//    BigNumber resultat = square_and_multiply(m, e, n, r, v, real_r2);
+//    resultat = square_and_multiply(resultat, d, n, r, v, real_r2);
 //    cout << resultat << endl;
 //
 //
@@ -54,14 +52,17 @@ int main() {
     BigNumber q (q1, base, 1);
     BigNumber decrypt (d1, base, 1);
     BigNumber v (v1, base, 1);
-    BigNumber m({1212, 86537}, base, 1);
+    BigNumber m({1,2,3,4, 1462085356, 489085113, 3474155137, 363905627, 567934108, 1462085356, 489085113, 3474155137, 363905627,1295810598, 567934108, 1462085356, 489085113, 3474155137, 363905627,1295810598, 567934108, 1462085356, 489085113, 3474155137, 363905627, 3554194397, 2672956310, 1462788076,1212, 86537}, base, 1);
     BigNumber real_r2 (real_r21, base, 1);
     BigNumber n = p*q;
-    int r = n.size();
+    int r = (int)n.size();
 
-    BigNumber resultat = quick_expGN(m, encrypt, n, r, v, real_r2);
-    resultat = quick_expGN(resultat, decrypt, n, r, v, real_r2);
-    cout << resultat << endl;
+    BigNumber resultat = square_and_multiply(m, encrypt, n, r, v, real_r2);
+    cout << "Cipher : " << resultat << endl;
+    resultat = square_and_multiply(resultat, decrypt, n, r, v, real_r2);
+    cout << "Plaintext : " << resultat << endl;
+
+
 
     return 0;
 }
