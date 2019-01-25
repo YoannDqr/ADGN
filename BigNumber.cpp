@@ -157,6 +157,16 @@ BigNumber operator + (BigNumber nb1, BigNumber nb2){
     return result;
 }
 
+BigNumber operator + (BigNumber nb1, unsigned int nb2) {
+    BigNumber tmp({nb2}, nb1.m_base);
+    return nb1 + tmp;
+}
+
+BigNumber operator + (unsigned int nb1, BigNumber nb2) {
+    BigNumber tmp({nb1}, nb2.m_base);
+    return nb2 + tmp;
+}
+
 BigNumber operator - (BigNumber nb1, BigNumber nb2) {
     /*
      * TODO : A refaire ^^
@@ -167,57 +177,58 @@ BigNumber operator - (BigNumber nb1, BigNumber nb2) {
 //    t1 = clock();
     BigNumber tmp ({}, nb2.m_base);
     int retenue = 0;
-    for(unsigned int i = 0; i < max(nb1.m_coef.size(), nb2.m_coef.size()); i++){
-        if( i < nb1.m_coef.size() && i < nb2.m_coef.size()){
-            if(nb1.m_coef[i] >= nb2.m_coef[i]){
-                if(retenue && nb2.m_base - nb2.m_coef[i] == 1){
-                    tmp.m_coef.emplace_back(nb1.m_coef[i]);
+    if(nb1 > nb2) {
+        for (unsigned int i = 0; i < max(nb1.m_coef.size(), nb2.m_coef.size()); i++) {
+            if (i < nb1.m_coef.size() && i < nb2.m_coef.size()) {
+                if (nb1.m_coef[i] >= nb2.m_coef[i]) {
+                    if (retenue && nb2.m_base - nb2.m_coef[i] == 1) {
+                        tmp.m_coef.emplace_back(nb1.m_coef[i]);
+                        retenue = 1;
+                    } else {
+                        if (nb1.m_coef[i] != nb2.m_coef[i]) {
+                            tmp.m_coef.emplace_back(nb1.m_coef[i] - nb2.m_coef[i] - retenue);
+                            retenue = 0;
+                        } else if (nb1.m_coef[i] == 0) {
+                            tmp.m_coef.emplace_back(0);
+                        } else {
+                            tmp.m_coef.emplace_back(nb1.m_base * retenue - retenue);
+                        }
+
+                    }
+
+                } else {
+                    tmp.m_coef.emplace_back(nb1.m_base - nb2.m_coef[i] - retenue);
+                    tmp.m_coef[i] += nb1.m_coef[i];
                     retenue = 1;
                 }
-                else {
-                    if(nb1.m_coef[i] != nb2.m_coef[i]) {
-                        tmp.m_coef.emplace_back(nb1.m_coef[i] - nb2.m_coef[i] - retenue);
+            } else if (i < nb1.m_coef.size()) {
+                if (retenue == 0) {
+                    tmp.m_coef.emplace_back(nb1.m_coef[i]);
+                } else {
+                    if (nb1.m_coef[i] == 0) {
+                        tmp.m_coef.emplace_back(nb1.m_base - 1);
+                    } else {
+                        tmp.m_coef.emplace_back(nb1.m_coef[i] - 1);
                         retenue = 0;
                     }
-                    else if(nb1.m_coef[i] == 0){
-                        tmp.m_coef.emplace_back(0);
-                    }
-                    else{
-                        tmp.m_coef.emplace_back(nb1.m_base*retenue - retenue);
-                    }
-
                 }
 
             }
-            else{
-                tmp.m_coef.emplace_back(nb1.m_base - nb2.m_coef[i] - retenue);
-                tmp.m_coef[i] += nb1.m_coef[i];
-                retenue = 1;
-            }
         }
-        else if(i < nb1.m_coef.size()){
-            if(retenue == 0) {
-                tmp.m_coef.emplace_back(nb1.m_coef[i]);
-            }
-            else{
-              if(nb1.m_coef[i] == 0){
-                  tmp.m_coef.emplace_back(nb1.m_base - 1);
-              }
-              else{
-                  tmp.m_coef.emplace_back(nb1.m_coef[i] - 1);
-                  retenue = 0;
-              }
-            }
-
-        }
+        tmp.m_format();
     }
 
-    tmp.m_format();
+
 //    t2 = clock();
 //    t_tmp += (t2 - t1);
 //    cmp += 1;
 //    cout << " Soustraction : " << t_tmp << endl;
     return tmp;
+}
+
+BigNumber operator - (BigNumber nb1, unsigned int nb2) {
+    BigNumber tmp ({nb2}, nb1.m_base);
+    return nb1 - tmp;
 }
 
 BigNumber operator * (BigNumber nb1, BigNumber nb2) {
@@ -236,10 +247,10 @@ void BigNumber::m_format(){
 
 BigNumber montgomery(BigNumber &a, BigNumber &b, BigNumber &n, int r, BigNumber &v){
 
-    clock_t t1, t2;
-    static clock_t t_tmp;
-    static unsigned int cmp = 0;
-    t1 = clock();
+//    clock_t t1, t2;
+//    static clock_t t_tmp;
+//    static unsigned int cmp = 0;
+//    t1 = clock();
 
     BigNumber s = a*b;
     //BigNumber t = s*v;
@@ -252,10 +263,10 @@ BigNumber montgomery(BigNumber &a, BigNumber &b, BigNumber &n, int r, BigNumber 
     if(u >= n){
         u = u - n;
     }
-    t2 = clock();
-    t_tmp += (t2 - t1);
-    cmp += 1;
-    cout << " Montgomery : " << t_tmp/(float)cmp << endl;
+//    t2 = clock();
+//    t_tmp += (t2 - t1);
+//    cmp += 1;
+//    cout << " Montgomery : " << t_tmp/(float)cmp << endl;
     return u;
 
 }
@@ -431,6 +442,56 @@ BigNumber partial_multiplication(BigNumber& nb1, BigNumber& nb2, const unsigned 
 //    cout << "Multiplication : " << t_tmp / (float)cmp << endl;
 
     return resultat;
+}
+
+BigNumber operator / (BigNumber nb1, BigNumber nb2) {
+//    clock_t t1, t2;
+//    static clock_t t_tmp;
+//    static unsigned int cmp = 0;
+//    t1 = clock();
+
+    BigNumber quotient(nb1.m_base);
+    BigNumber val = nb1.m_slice(nb1.size() - nb2.size(), nb2.size());
+
+    if(nb2 > val){
+        val >> 1;
+        val = val + nb1.m_slice(nb1.size() - nb2.size() - 1, 1);
+    }
+
+    unsigned int quotient_size = nb1.size() - val.size();
+
+    for(unsigned int i = 0; i < quotient_size; i++){
+        quotient.m_coef.emplace_back(0);
+    }
+
+    for(unsigned int i = 0; i < quotient_size + 1; i++){
+        while(val >= nb2){
+            quotient.m_coef[quotient_size - i] += 1;
+            val = val - nb2;
+        }
+        val >> 1;
+        val = val + nb1.m_slice(quotient_size - i - 1, 1);
+    }
+//    t2 = clock();
+//    t_tmp += (t2 - t1);
+//    cmp += 1;
+//    cout << " Division : " << (t2 - t1)/(float)cmp << endl;
+    return quotient;
+}
+
+BigNumber BigNumber::m_slice(unsigned int deb, unsigned int length) {
+    BigNumber tmp(m_base);
+    if(deb < size()){
+        for(unsigned int i = deb; i < min(size(),deb + length); i++){
+            if(i == deb){
+                tmp.m_coef[0] = m_coef[i];
+            }
+            else {
+                tmp.m_coef.emplace_back(m_coef[i]);
+            }
+        }
+    }
+    return tmp;
 }
 
 void representation_binaire(const unsigned int decimal, char *representation, const double size){

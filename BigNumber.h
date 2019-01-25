@@ -2,8 +2,8 @@
 // Created by yoanndqr on 07/01/19.
 //
 
-#ifndef RSA_BIGNUMBER_H
-#define RSA_BIGNUMBER_H
+#ifndef ADGN_BIGNUMBER_H
+#define ADGN_BIGNUMBER_H
 
 #include <iostream>
 #include <cmath>
@@ -16,10 +16,9 @@ class BigNumber{
 public:
     BigNumber(vector<unsigned int> coefs, long unsigned int base, int reverse);
     BigNumber(vector<unsigned int> coefs, long unsigned int base);
-
     explicit BigNumber(long unsigned int base);
 
-    unsigned int size() const {return (unsigned int)m_coef.size();}
+    unsigned int size() {return (unsigned int)m_coef.size();}
     BigNumber& operator = (BigNumber nb);
     void operator >> (int index);
     friend bool operator == (BigNumber& value1, BigNumber& value2);
@@ -28,23 +27,33 @@ public:
     void operator << (int index);
     friend ostream& operator << (ostream& os, BigNumber nb2 );
     friend BigNumber operator + (BigNumber nb1, BigNumber nb2);
+    friend BigNumber operator + (BigNumber nb1, unsigned int nb2);
+    friend BigNumber operator + (unsigned int nb1, BigNumber nb2);
     friend BigNumber operator - (BigNumber nb1, BigNumber nb2);
+    friend BigNumber operator - (BigNumber nb1, unsigned int nb2);
     friend BigNumber operator * (BigNumber nb1, BigNumber nb2);
+    friend BigNumber operator / (BigNumber nb1, BigNumber nb2);
     friend BigNumber partial_multiplication(BigNumber& nb1, BigNumber& nb2, unsigned int r);
     BigNumber m_square_and_multiply(BigNumber &e, BigNumber &N, int r, BigNumber &v, BigNumber &real_r2);
+    BigNumber m_slice(unsigned int deb, unsigned int end);
     void m_mask(int r);
 
     long unsigned int m_base;
+    vector<unsigned int> m_coef;
 
 private:
-    vector<unsigned int> m_coef;
     void m_format();
 
 };
 
-ostream& operator << (ostream& os, BigNumber nb );
+ostream& operator << (ostream& os, BigNumber nb);
 BigNumber operator + (BigNumber nb1, BigNumber nb2);
+BigNumber operator + (BigNumber nb1, unsigned int nb2);
+BigNumber operator + (unsigned int nb1, BigNumber nb2);
 BigNumber operator * (BigNumber nb1, BigNumber nb2);
+BigNumber operator - (BigNumber nb1, BigNumber nb2);
+BigNumber operator - (BigNumber nb1, unsigned int nb2);
+BigNumber operator / (BigNumber nb1, BigNumber nb2);
 BigNumber partial_multiplication(BigNumber& nb1, BigNumber& nb2, unsigned int r);
 BigNumber montgomery(BigNumber &a, BigNumber &b, BigNumber &n, int r, BigNumber &v);
 void representation_binaire(unsigned int decimal, char *representation, double size);
