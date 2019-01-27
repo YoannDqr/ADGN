@@ -4,40 +4,31 @@
 
 #include "BigNumber.h"
 
-BigNumber::BigNumber(vector<unsigned int> coefs, long unsigned int base, int reverse){
-    for (unsigned long i = 0; i < coefs.size(); i++) {
-        this->m_coef.emplace_back(coefs[coefs.size() - 1 - i]);
-    }
-    this->m_base = base;
+BigNumber::BigNumber(vector<unsigned int> coefs, long unsigned int base, int reverse):Polynome(coefs, reverse){
+    m_base = base;
 }
-
-BigNumber::BigNumber(vector<unsigned int> coefs, long unsigned int base){
-    for (unsigned long i = 0; i < coefs.size(); i++) {
-        this->m_coef.emplace_back(coefs[i]);
-    }
-    this->m_base = base;
+BigNumber::BigNumber(vector<unsigned int> coefs, long unsigned int base):Polynome(coefs){
+    m_base = base;
 }
-
-BigNumber::BigNumber(long unsigned int base){
-    this->m_base = base;
-    this->m_coef.emplace_back(0);
+BigNumber::BigNumber(long unsigned int base):Polynome(){
+    m_base = base;
 }
 
 bool operator == (BigNumber& value1, BigNumber& value2){
     value1.m_format();
     value2.m_format();
-    return value1.m_coef == value2.m_coef;
+    return (value1.m_coef == value2.m_coef) && (value1.m_base == value2.m_base);
 }
 
 bool operator > (BigNumber& value1, BigNumber& value2){
     value1.m_format();
     value2.m_format();
-    if(value1.size() > value2.size()){
+    if(value1.m_degre() > value2.m_degre()){
         return true;
     }
 
-    else if(value1.size() == value2.size()){
-        for(int i = (int)value1.size() - 1; i >= 0; i--){
+    else if(value1.m_degre() == value2.m_degre()){
+        for(int i = (int) value1.m_degre() - 1; i >= 0; i--){
             if(value1.m_coef[i] > value2.m_coef[i]){
                 return true;
             }
@@ -96,10 +87,10 @@ BigNumber BigNumber::m_square_and_multiply(BigNumber &e, BigNumber &N, const int
     BigNumber m1 = montgomery(*this, real_r2, N, r, v);
     bool empty = true;
 
-    for(unsigned long i = e.size() ; i > 0; i--){
+    for(unsigned long i = e.m_degre() ; i > 0; i--){
         representation_binaire(e.m_coef[i - 1], representation, size);
         for(unsigned int j = 0; j < size; j++) {
-
+            //cout << i << "  " << j << "   " << e.m_degre() << endl;
             if(!empty) {
                 result = montgomery(result, result, N, r, v);
             }
@@ -238,7 +229,7 @@ BigNumber operator * (BigNumber nb1, BigNumber nb2) {
 
 void BigNumber::m_format(){
     int i = 0;
-    unsigned int m_size = size();
+    unsigned int m_size = m_degre();
     while((i < m_size) && (m_coef[m_size-1-i] == 0) && m_coef.size() > 1){
         m_coef.erase(m_coef.begin() + m_size-1-i);
         i++;
@@ -273,7 +264,7 @@ BigNumber montgomery(BigNumber &a, BigNumber &b, BigNumber &n, int r, BigNumber 
 
 void BigNumber::m_mask(int r) {
     vector<unsigned int> tmp;
-    for (unsigned int i = 0; i < this->size(); i ++){
+    for (unsigned int i = 0; i < this->m_degre(); i ++){
         if(i < r){
             tmp.emplace_back(this->m_coef[i]);
         }
@@ -288,7 +279,7 @@ BigNumber partial_multiplication(BigNumber& nb1, BigNumber& nb2, const unsigned 
 //    t1 = clock();
     const unsigned int SIZE_INT16 = 65536;
     BigNumber resultat(nb1.m_base);
-    for(unsigned long i = 0; i < nb1.size() ; i++) {
+    for(unsigned long i = 0; i < nb1.m_degre() ; i++) {
         unsigned int retenue = 0;
         vector<unsigned int> resultat_intermedaire;
 
@@ -451,14 +442,14 @@ BigNumber operator / (BigNumber nb1, BigNumber nb2) {
 //    t1 = clock();
 
     BigNumber quotient(nb1.m_base);
-    BigNumber val = nb1.m_slice(nb1.size() - nb2.size(), nb2.size());
+    BigNumber val = nb1.m_slice(nb1.m_degre() - nb2.m_degre(), nb2.m_degre());
 
     if(nb2 > val){
         val >> 1;
-        val = val + nb1.m_slice(nb1.size() - nb2.size() - 1, 1);
+        val = val + nb1.m_slice(nb1.m_degre() - nb2.m_degre() - 1, 1);
     }
 
-    unsigned int quotient_size = nb1.size() - val.size();
+    unsigned int quotient_size = nb1.m_degre() - val.m_degre();
 
     for(unsigned int i = 0; i < quotient_size; i++){
         quotient.m_coef.emplace_back(0);
@@ -480,18 +471,52 @@ BigNumber operator / (BigNumber nb1, BigNumber nb2) {
 }
 
 BigNumber BigNumber::m_slice(unsigned int deb, unsigned int length) {
-    BigNumber tmp(m_base);
-    if(deb < size()){
-        for(unsigned int i = deb; i < min(size(),deb + length); i++){
-            if(i == deb){
-                tmp.m_coef[0] = m_coef[i];
-            }
-            else {
-                tmp.m_coef.emplace_back(m_coef[i]);
+    vector <unsigned int> coef = Polynome::m_slice(deb, length).m_coef;
+    BigNumber tmp (coef, m_base);
+    return tmp;
+}
+
+
+void BigNumber::m_change_base(double new_base) {
+    vector <unsigned int> tmp;
+    unsigned int size_new_base = floor(log2((double)new_base));
+    unsigned int size_base = floor(log2((double) m_base));
+    char partial_representation[size_base];
+    string representation;
+
+    if(m_base != 2) {
+        for (unsigned int i = 0; i < m_degre(); i++) {
+            representation_binaire(m_coef[m_degre() - 1 - i], partial_representation, size_base);
+
+            for(unsigned int j = 0; j < size_base; j++){
+                representation += partial_representation[j];
             }
         }
     }
-    return tmp;
+    else{
+        for(unsigned int i = 0; i < m_degre(); i++){
+            representation += to_string(m_coef[m_degre() - 1 - i]);
+        }
+    }
+
+    unsigned int value = 0;
+    unsigned int bit_val = 1;
+    for(unsigned int i = 0; i < representation.size(); i++){
+        if(i % size_new_base == 0 and i != 0){
+            tmp.emplace_back(value);
+            value = 0;
+            bit_val = 1;
+        }
+        value += representation[representation.size() - 1 - i] == '1' ? bit_val : 0;
+        bit_val *= 2;
+    }
+    if(value != 0){
+        tmp.emplace_back(value);
+    }
+    m_coef = tmp;
+    m_base = new_base;
+    m_format();
+
 }
 
 void representation_binaire(const unsigned int decimal, char *representation, const double size){

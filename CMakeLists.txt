@@ -3,4 +3,4 @@ project(RSA)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(RSA main.cpp BigNumber.cpp BigNumber.h)
+add_executable(RSA main.cpp BigNumber.cpp BigNumber.h Polynome.cpp Polynome.h)

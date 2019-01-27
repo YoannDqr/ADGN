@@ -5,20 +5,17 @@
 #ifndef ADGN_BIGNUMBER_H
 #define ADGN_BIGNUMBER_H
 
-#include <iostream>
-#include <cmath>
-#include <vector>
-#include <time.h>
+#include "Polynome.h"
+#include <string>
 
 using namespace std;
 
-class BigNumber{
+class BigNumber : public Polynome{
 public:
     BigNumber(vector<unsigned int> coefs, long unsigned int base, int reverse);
     BigNumber(vector<unsigned int> coefs, long unsigned int base);
     explicit BigNumber(long unsigned int base);
 
-    unsigned int size() {return (unsigned int)m_coef.size();}
     BigNumber& operator = (BigNumber nb);
     void operator >> (int index);
     friend bool operator == (BigNumber& value1, BigNumber& value2);
@@ -35,11 +32,12 @@ public:
     friend BigNumber operator / (BigNumber nb1, BigNumber nb2);
     friend BigNumber partial_multiplication(BigNumber& nb1, BigNumber& nb2, unsigned int r);
     BigNumber m_square_and_multiply(BigNumber &e, BigNumber &N, int r, BigNumber &v, BigNumber &real_r2);
-    BigNumber m_slice(unsigned int deb, unsigned int end);
+    BigNumber m_slice(unsigned int deb, unsigned int length);
+    void m_change_base(double new_base);
     void m_mask(int r);
 
     long unsigned int m_base;
-    vector<unsigned int> m_coef;
+
 
 private:
     void m_format();
